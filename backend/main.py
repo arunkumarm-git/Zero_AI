@@ -14,7 +14,7 @@ app = FastAPI()
 load_dotenv()
 # --- CONFIGURATION ---
 # 1. Hugging Face Config
-HF_SPACE = "Arunmass/AI_IMG_Detector"
+HF_SPACE = os.getenv("HF_SPACE")
 HF_TOKEN = os.getenv("HF_API")
 
 # 2. Cloudinary Config
