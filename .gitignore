@@ -2,6 +2,7 @@
 backend/venv/
 backend/.env
 .env
+backend/__pycache__/
 
 # Data and Models
 Dataset/
