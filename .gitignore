@@ -1,0 +1,13 @@
+# Python/Backend environment
+backend/venv/
+backend/.env
+.env
+
+# Data and Models
+Dataset/
+models/
+Sample_test/
+
+# Documents
+*.pptx
+
