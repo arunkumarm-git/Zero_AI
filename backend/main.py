@@ -18,12 +18,12 @@ HF_SPACE = os.getenv("HF_SPACE")
 HF_TOKEN = os.getenv("HF_API")
 
 # 2. Cloudinary Config
-CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload"
-CLOUDINARY_PRESET = "zero_ai_preset" # The name you gave your unsigned preset
+CLOUDINARY_UPLOAD_URL = os.getenv("CLOUDINARY_UPLOAD_URL")
+CLOUDINARY_PRESET = os.getenv("CLOUDINARY_PRESET")
 
 # 3. MongoDB Config
 # Replace <password> with your actual password (no brackets)
-MONGO_URI = "mongodb+srv://YOUR_USER:YOUR_PASSWORD@cluster0.mongodb.net/?retryWrites=true&w=majority"
+MONGO_URI = os.getenv("MONGO_URI")
 DB_NAME = "zero_ai_db"
 
 # --- SETUP CLIENTS ---
