@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Body
+from fastapi import FastAPI, File, UploadFile, Form, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from gradio_client import Client, handle_file
 from pymongo import MongoClient
@@ -10,6 +10,7 @@ import os
 import shutil
 import tempfile
 from dotenv import load_dotenv
+from bson import ObjectId
 
 # --- CONFIGURATION ---
 load_dotenv()
@@ -40,7 +41,7 @@ try:
 except Exception as e:
     print(f"❌ MongoDB Connection Error: {e}")
 
-# Enable CORS for React
+# Enable CORS for React Frontend (Port 3000)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -49,7 +50,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- MODELS (For Request Validation) ---
+# --- MODELS ---
 class UserRegister(BaseModel):
     username: str
     email: str
@@ -66,25 +67,22 @@ def get_password_hash(password):
 def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
-def serialize_post(post):
-    return {
-        "_id": str(post["_id"]),
-        "description": post.get("description"),
-        "image_url": post.get("image_url"),
-        "verified": post.get("verified"),
-        "created_at": post.get("created_at").isoformat() if post.get("created_at") else None,
-        "username": post.get("username", "Unknown") # Include username in post
-    }
+def serialize_doc(doc):
+    """Converts MongoDB ObjectId to string for JSON compatibility."""
+    doc["_id"] = str(doc["_id"])
+    if "createdAt" in doc and isinstance(doc["createdAt"], datetime):
+        doc["createdAt"] = doc["createdAt"].isoformat()
+    if "created_at" in doc and isinstance(doc["created_at"], datetime):
+        doc["created_at"] = doc["created_at"].isoformat()
+    return doc
 
 # --- AUTH ENDPOINTS ---
 
 @app.post("/api/auth/register")
 async def register(user: UserRegister):
-    # Check if user exists
     if users_collection.find_one({"email": user.email}):
         raise HTTPException(status_code=400, detail="Email already registered")
     
-    # Hash password and save
     new_user = {
         "username": user.username,
         "email": user.email,
@@ -96,117 +94,110 @@ async def register(user: UserRegister):
         "createdAt": datetime.now()
     }
     result = users_collection.insert_one(new_user)
-    
-    # Return user info (excluding password)
-    return {
-        "_id": str(result.inserted_id),
-        "username": new_user["username"],
-        "email": new_user["email"]
-    }
+    return serialize_doc(new_user)
 
 @app.post("/api/auth/login")
 async def login(user: UserLogin):
-    # Find user
     db_user = users_collection.find_one({"email": user.email})
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
     
-    # Check password
     if not verify_password(user.password, db_user["password"]):
         raise HTTPException(status_code=400, detail="Wrong password")
     
-    # Return user data (simulate a token)
-    return {
-        "_id": str(db_user["_id"]),
-        "username": db_user["username"],
-        "email": db_user["email"],
-        "profilePicture": db_user.get("profilePicture", ""),
-        "accessToken": "dummy-token-for-now" 
-    }
+    # The frontend expects a user object with an accessToken
+    response_user = serialize_doc(db_user)
+    response_user["accessToken"] = "simulated_token_for_dev"
+    return response_user
 
 # --- POST ENDPOINTS ---
 
-@app.post("/api/create-post")
+@app.post("/api/posts")
 async def create_post(
-    file: UploadFile = File(...), 
-    description: str = Form(...),
-    # We will assume username is sent, or default to "Anonymous" for now
-    username: str = Form("Arun (User)") 
+    userId: str = Form(...),
+    desc: str = Form(""),
+    file: UploadFile = File(...)
 ):
-    print(f"Received upload request: {file.filename}")
-    
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".jpg") as temp_file:
-        shutil.copyfileobj(file.file, temp_file)
-        temp_file_path = temp_file.name
+    """Creates a post after verifying image isn't AI generated."""
+    user = users_collection.find_one({"_id": ObjectId(userId)})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Create temp file for AI Detection
+    with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(file.filename)[1]) as tmp:
+        shutil.copyfileobj(file.file, tmp)
+        tmp_path = tmp.name
 
     try:
-        # 1. AI Check
-        print("1. Sending to AI Detector...")
+        # 1. Zero AI Content Verification
+        print(f"🔍 Verifying content for user: {user['username']}...")
         client = Client(HF_SPACE, hf_token=HF_TOKEN)
-        result = client.predict(img=handle_file(temp_file_path), api_name="/predict")
-        print(f"🔍 AI Check Result: {result}")
-
-        # Parsing Logic
-        ai_score = 0.0
-        hum_score = 0.0
+        result = client.predict(img=handle_file(tmp_path), api_name="/predict")
         
-        # Handle dictionary response
-        if isinstance(result, dict):
-            # Check if keys exist, otherwise try to parse from a list if specific format
-            if 'ai' in result:
-                ai_score = result['ai']
-                hum_score = result.get('hum', 0)
-            elif 'label' in result: 
-                 # Handle single label response if necessary
-                 pass
-        
-        # Safe fallback if parsing failed but we want to allow testing
-        # (Remove this fallback in production if strictness is required)
-        if ai_score == 0 and hum_score == 0:
-             print("⚠️ Warning: Could not parse score, defaulting to Human for test")
-             hum_score = 1.0
+        # Example result: {'ai': 0.02, 'hum': 0.98}
+        ai_score = result.get('ai', 0)
+        hum_score = result.get('hum', 1)
 
         if ai_score > hum_score:
-            print("❌ BLOCKED: AI content detected.")
-            raise HTTPException(status_code=406, detail="AI Content Detected.")
-
-        print("✅ VERIFIED: Content is Human.")
+            raise HTTPException(status_code=406, detail="AI Content Detected. Only human creators allowed.")
 
         # 2. Upload to Cloudinary
-        with open(temp_file_path, "rb") as f:
-            files = {'file': f}
-            data = {'upload_preset': CLOUDINARY_PRESET}
-            cloud_res = requests.post(CLOUDINARY_UPLOAD_URL, files=files, data=data)
+        with open(tmp_path, "rb") as f:
+            upload_data = {'upload_preset': CLOUDINARY_PRESET}
+            cloud_res = requests.post(CLOUDINARY_UPLOAD_URL, files={'file': f}, data=upload_data)
             
-        secure_url = cloud_res.json().get("secure_url")
-        if not secure_url:
-            raise HTTPException(status_code=500, detail="Image upload failed")
+        img_url = cloud_res.json().get("secure_url")
+        if not img_url:
+            raise HTTPException(status_code=500, detail="Failed to host image")
 
-        # 3. Save to DB
-        post_document = {
-            "description": description,
-            "image_url": secure_url,
-            "username": username,
-            "ai_score": ai_score,
-            "human_score": hum_score,
+        # 3. Save Post to MongoDB
+        new_post = {
+            "userId": userId,
+            "username": user["username"],
+            "desc": desc,
+            "img": img_url,
+            "likes": [],
             "created_at": datetime.now(),
-            "verified": True
+            "ai_verification_score": ai_score
         }
-        posts_collection.insert_one(post_document)
-        
-        return {"status": "success", "imgurl": secure_url}
+        posts_collection.insert_one(new_post)
+        return serialize_doc(new_post)
 
-    except Exception as e:
-        print(f"Error: {e}")
-        if isinstance(e, HTTPException): raise e
-        raise HTTPException(status_code=500, detail=str(e))
     finally:
-        if os.path.exists(temp_file_path): os.remove(temp_file_path)
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
-@app.get("/api/timeline/all")
+@app.get("/api/posts/timeline/all")
 async def get_timeline():
-    posts_cursor = posts_collection.find().sort("created_at", -1)
-    return [serialize_post(post) for post in posts_cursor]
+    """Fetches all human-verified posts for the feed."""
+    posts = list(posts_collection.find().sort("created_at", -1))
+    return [serialize_doc(p) for p in posts]
+
+@app.put("/api/posts/{post_id}/like")
+async def like_post(post_id: str, userId: str = Form(...)):
+    post = posts_collection.find_one({"_id": ObjectId(post_id)})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    if userId in post.get("likes", []):
+        posts_collection.update_one({"_id": ObjectId(post_id)}, {"$pull": {"likes": userId}})
+        return "Post unliked"
+    else:
+        posts_collection.update_one({"_id": ObjectId(post_id)}, {"$push": {"likes": userId}})
+        return "Post liked"
+
+# --- USER ENDPOINTS ---
+
+@app.get("/api/users")
+async def get_user(userId: str = None, username: str = None):
+    query = {}
+    if userId: query["_id"] = ObjectId(userId)
+    elif username: query["username"] = username
+    
+    user = users_collection.find_one(query)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return serialize_doc(user)
 
 if __name__ == "__main__":
     import uvicorn

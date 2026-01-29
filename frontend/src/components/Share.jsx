@@ -12,54 +12,39 @@ function Share(props) {
   const desc = useRef();
   const { user } = useContext(AuthContext);
   const [file, setFile] = useState(null);
-  const [loading, setLoading] = useState(false); // Add loading state
   const axiosJWT = axios.create();
   Intercept(axiosJWT);
-
   const submitHandler = async (e) => {
     e.preventDefault();
-    if (!file) {
-        NotificationManager.warning("Warning", "Photo is required", 3000);
-        return;
-    }
-
-    setLoading(true);
     e.currentTarget.disabled = true;
-
+    let formDataInfo = {};
+    formDataInfo.description = desc.current.value;
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("description", desc.current.value);
+      const formDataFile = new FormData();
+      if (file) {
+        formDataFile.append("file", file);
+        formDataFile.append("upload_preset", "raw8ntho");
 
-      // Send to your FastAPI backend instead of Cloudinary directly
-      // The backend will handle the AI check AND the Cloudinary upload
-      await axiosJWT.post("http://localhost:8000/api/create-post", formData, {
-        headers: { 
-            Authorization: "Bearer " + user.accessToken,
-            "Content-Type": "multipart/form-data" 
-        },
-      });
+        const img = await axios.post(
+          "https://api.cloudinary.com/v1_1/YOUR_UPLOAD_PRESET/image/upload",
+          formDataFile
+        );
+        formDataInfo.imgurl = img.data.secure_url;
 
-      NotificationManager.success("Success", "Post created successfully (Human Verified)", 3000);
-      setFile(null);
-      desc.current.value = "";
-      props.hideAddPostHandler();
-      navigate(`/home`);
-
-    } catch (err) {
-      console.error(err);
-      // Handle the specific error if the backend rejects it as AI
-      if (err.response && err.response.status === 406) {
-         NotificationManager.error("Blocked", "AI Content Detected! This platform is for human content only.", 5000);
+        await axiosJWT.post("http://localhost:8000/api/article", formDataInfo, {
+          headers: { Authorization: "Bearer " + user.accessToken },
+        });
+        NotificationManager.success("Success", "Post has been created", 3000);
+        props.hideAddPostHandler();
+        navigate(`/home`);
       } else {
-         NotificationManager.error("Error", "Something went wrong during upload.", 3000);
+        e.currentTarget.disabled = false;
+        throw new Error("No file !!");
       }
-      e.currentTarget.disabled = false;
-    } finally {
-        setLoading(false);
+    } catch (e) {
+      NotificationManager.warning("Warning", "Photo is required", 3000);
     }
   };
-
   return (
     <ShareContainer>
       <div className="shareWrapper">
@@ -69,7 +54,6 @@ function Share(props) {
             className="shareInput"
             ref={desc}
             required
-            disabled={loading}
           />
         </div>
         <hr className="shareHr" />
@@ -77,9 +61,7 @@ function Share(props) {
           <div className="shareOptions">
             <label htmlFor="file" className="shareOption">
               <MdPermMedia className="shareIcon" />
-              <span className="shareOptionText">
-                {file ? file.name : "Photo or Video"}
-              </span>
+              <span className="shareOptionText">Photo or Video</span>
               <input
                 style={{ display: "none" }}
                 type="file"
@@ -89,14 +71,8 @@ function Share(props) {
               />
             </label>
           </div>
-          <button 
-            className="shareButton" 
-            onClick={submitHandler} 
-            type="submit"
-            disabled={loading}
-            style={{ backgroundColor: loading ? "gray" : "#1872f2"}}
-          >
-            {loading ? "Verifying..." : "Share"}
+          <button className="shareButton" onClick={submitHandler} type="submit">
+            Share
           </button>
         </form>
       </div>
@@ -111,6 +87,7 @@ const ShareContainer = styled.div`
   box-shadow: 0px 0px 16px -8px rgba(0, 0, 0, 0.68);
   .shareWrapper {
     padding: 10px;
+    /* border: solid #5b6dcd 1px; */
     margin: 10px;
   }
   .shareTop {
