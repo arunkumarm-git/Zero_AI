@@ -1,0 +1,38 @@
+\chapter{Research Problem: Bridging Deep Visual Forensics and Traditional Signal Analysis}
+\label{ch:problem}
+
+\section{Formal Problem Definition}
+
+Let $\mathcal{I}$ denote the set of all digital images. The binary classification problem is defined as: given an image $x \in \mathcal{I}$, determine whether $x$ was produced by a real-world camera or by a generative AI system. Formally, we seek to learn a function $f: \mathcal{I} \rightarrow \{0, 1\}$, where $0$ denotes AI-generated and $1$ denotes real/photographed, such that $f$ minimises the expected binary cross-entropy loss over the joint distribution of real and AI-generated images encountered in practice:
+\begin{equation}
+    \mathcal{L}(f) = -\mathbb{E}_{(x,y) \sim P} \left[ y \log f(x) + (1-y) \log (1 - f(x)) \right]
+\end{equation}
+where $P$ is the distribution over real-world image pairs $(x, y)$.
+
+The challenge inherent in learning $f$ is that the distributions of real and AI-generated images are both high-dimensional and non-stationary: new generative models are continuously released, and the statistical properties of AI-generated images evolve rapidly. A system trained on the outputs of specific generative models at a specific point in time may not generalise to the outputs of models released after training. This motivates the design of $f$ to incorporate signals grounded in physical principles---such as camera sensor physics and natural image statistics---rather than relying exclusively on learned artefact signatures specific to particular generative models.
+
+\section{Identified Limitations of Existing Approaches}
+
+Through analysis of the literature and hands-on evaluation of commercially available detection tools, four principal limitations of existing approaches were identified.
+
+\textbf{First}, single-model CNN and ViT detectors achieve acceptable accuracy on in-distribution test sets---images from the same generative models present in the training data---but exhibit substantial accuracy degradation on out-of-distribution images from unseen generators. This generalisation failure is particularly acute for newer diffusion model architectures, whose synthesis process leaves different artefact patterns than the GAN architectures that dominate most existing training datasets.
+
+\textbf{Second}, the ensemble architectures deployed by commercial detection platforms (represented in this study by Undetectable AI and AI or Not) achieve better generalisation but at prohibitive computational cost. Measured latencies of 5,230 ms and 920 ms respectively for single-image inference render these systems unsuitable for integration into content moderation pipelines that must process thousands of images per second.
+
+\textbf{Third}, existing detection approaches based exclusively on deep learning features have systematic blind spots in the frequency and noise domains. Neural networks trained with stochastic gradient descent on standard image datasets do not develop representations specifically sensitive to the statistical properties of natural image noise, Bayer demosaicing artefacts, or the log-log frequency slope of natural image power spectra. Explicitly engineering features that capture these properties and fusing them with deep embeddings can address these blind spots without requiring a fundamentally different training paradigm.
+
+\textbf{Fourth}, existing architectures typically operate at $224 \times 224$ pixel resolution---the canonical input size of ImageNet-pretrained models. At this resolution, fine-grained forensic signals, particularly noise patterns, texture micro-statistics, and high-frequency DCT irregularities, are destroyed by the downsampling process. Operating at $512 \times 512$ resolution preserves these signals but requires architectural modifications to accommodate the larger positional embedding space.
+
+\section{Research Hypotheses}
+
+The research is guided by three primary hypotheses:
+
+\begin{itemize}
+    \item \textbf{H1:} A vision encoder pre-trained with a pairwise sigmoid loss on 10 billion image-text pairs (SigLIP 2) will provide richer forensic feature representations than architectures pre-trained with standard classification objectives, due to its training to align diverse visual concepts with linguistic descriptions.
+
+    \item \textbf{H2:} Explicitly fusing seven handcrafted forensic features derived from physics-grounded principles of natural image statistics with the SigLIP 2 deep embedding will improve detection accuracy and generalisation compared to using either signal type in isolation.
+
+    \item \textbf{H3:} A hybrid single-model architecture incorporating both signal types can achieve accuracy and generalisation competitive with multi-model ensembles while maintaining inference latency below 200 milliseconds on accessible hardware.
+\end{itemize}
+
+

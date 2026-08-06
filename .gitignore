@@ -1,0 +1,35 @@
+# Python & Bytecode
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+
+# Virtual Environments
+venv/
+.venv/
+env/
+
+# Large Model Weights & Raw Datasets (>100MB, excluded for GitHub upload)
+*.safetensors
+*.pt
+*.bin
+Dataset/
+models/ai_image/checkpoint-*/
+models/ai_text/
+models/ai_video/
+
+# Node.js & Dependencies
+node_modules/
+dist/
+build/
+.next/
+*.tsbuildinfo
+
+# OS & Temporary Files
+.DS_Store
+Thumbs.db
+~$*.pptx
+~$*.docx
+*.tmp
+*.log

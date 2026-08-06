@@ -1,0 +1,72 @@
+\chapter{Introduction}
+
+\section{Background}
+
+In the current digital era, an unprecedented level of convergence has been witnessed with regard to computational power and generative intelligence, leading to an irreversible transformation with regard to the nature of visual content. Over the course of a few years, diffusion models, Generative Adversarial Networks, and multimodal language-image systems have progressed from generating basic approximations of human faces to producing high-resolution photorealistic images that are indistinguishable from photographs taken with high-quality equipment. Today, DALL·E (OpenAI), Stable Diffusion (via Leonardo AI), Google Gemini, Ideogram, and OpenAI Sora collectively produce millions of synthetic images on a daily basis, with no standardized method for tracking the diffusion of these images on social media feeds, news aggregators, and messaging platforms. Such an eventuality has significant implications for society. Synthetic images have been linked to the creation of non-consensual intimate imagery, political actions that are falsified, fraudulent financial statements, and the degradation of the integrity of evidence in legal cases. An analysis performed by the RAND Corporation \cite{chandra2024rand} indicates that the adverse effects of AI-generated imagery are part of a spectrum of harm that includes personal safety threats and geopolitically focused disinformation. Notably, the adverse effects cannot be addressed with human vigilance, with studies indicating that even trained individuals have performance levels near chance when distinguishing photographs and AI-generated imagery.
+
+Automated detection systems, therefore, represent the essential last line of defense in the integrity of digital content. The domain of image detection from AI-generated content, however, is highly fragmented and in constant evolution. Initial detection tools, based on convolutional neural networks (CNN) and designed to recognize specific types of GANs, such as ProGAN or StyleGAN, are found to have very low generalizability to the newer diffusion-based GANs. More complex networks, based on Vision Transformers or Vision-Language Models, while more robust, are associated with computational costs that are prohibitively high, rendering them impractical in the context of real-world, web-scale, timely detection. In practice, the solution has been the development of ensemble detection tools, which, while more accurate, are associated with costs that are only accessible to large corporations with access to GPU computing infrastructure.
+
+\section{Problem Statement}
+
+The primary research question that is being addressed by the dissertation is whether the same level of precision and robustness, as is achieved by the computationally expensive and complex multi-model ensemble-based architectures, can be achieved by the single-pass artificial intelligence image detector, while maintaining the speed and resource requirements that are appropriate and feasible within the web-based application domain. The state-of-the-art image detectors have shown that, while high precision is achieved, the speed and resource requirements are high, and while the speed and resource requirements are achieved, the precision is very low and hence not feasible. So far, no prior work exists on the application and implementation of the vision encoder part of the Vision-Language Model, which was specifically pre-trained using the pairwise sigmoid loss function, called SigLIP 2, as the back end for the image forensics application using artificial intelligence. There is no prior implementation that combines the traditional image forensic features with the back end using a single classification head.
+
+\section{Motivation}
+
+This research is inspired both by technical and social factors. The social concern is that the digital visual, like the image, loses its credibility. It's a main danger to democratic discourse, judicial procedure, and personal well-being. It is crucial that journalists, fact-checkers, legal experts, and ordinary citizens have access to fast, accurate and freely accessible detecting tools to navigate an information environment saturated with AI-generated content.
+
+Technically, the swift pace of change in generative models has consistently outpaced the development of effective detection countermeasures. The most recent benchmark work by Li et al.~\cite{li2025aigibench} revealed that even modern state-of-the-art detectors exhibit drastic performance decline under realistic conditions such as JPEG compression, image resizing, and colour changes. Ren et al.~\cite{ren2026benchmark} further demonstrated that no single existing architecture performs consistently across all benchmarks, and that training data alignment is a key performance determinant over architectural sophistication. These results indicate that architectures combining deep learned representations with explicit, physics-grounded forensic signals could provide a more resilient and general detection system than purely data-driven systems.
+
+\section{Challenges}
+
+Several significant challenges characterise the problem of automated AI image filtration.
+
+\textbf{Generalization across generative paradigms:} Models trained on GAN generated Images frequently fail on diffusion model outputs, as the two paradigms leave fundamentally different artifact signatures. A detector must be robust across both.
+
+\textbf{Hard negatives:} AI generators are increasingly designed with photorealism as an explicit optimization target. Certain images are particularly high-resolution outputs from models like Stable Diffusion 3 or DALL-E 3 exhibit no obvious visual artifacts and can defeat conventional detectors.
+
+\textbf{Computational constraints:} For real-time web deployment, inference latency are required to be less than 200 milliseconds on conventional hardware. Current ensemble methods go far beyond this limit.
+
+\textbf{Dataset bias:} The public training sets tend to be biased in favour of certain generative models due to the popularity of trendy models, being biased in the opposite direction in relation to the diversity of photography in the real world.
+
+\textbf{Resolution mismatch:} The traditional vision models are based on a resolution of $224 \times 224$ pixels, which in the case of fine-grained forensic artifacts, particularly those involving frequency statistics, results in the degradation of artifacts due to downsampling.
+
+\textbf{Adversarial resilience:} Post-processing operations on images, including JPEG compression, resizing, and noise addition are intended to mask artifact signatures, which are particularly targeted in frequency domain-based artifact detection.
+
+\section{Essence of the Approach}
+
+This dissertation proposes a hybrid forensic architecture that addresses the above challenges through 3 principal innovations. First, the text component of the SigLIP 2 model \cite{tschannen2025siglip2} is removed, leaving a vision-only encoder that has been enriched through image-text pretraining, yielding richer, more semantically dense visual representations than a standard image classification model. The position embeddings of this encoder are bicubically interpolated from the standard $224 \times 224$ training resolution to $512 \times 512$, preserving fine-grained forensic details that would otherwise be lost.
+
+Second, seven traditional forensic signals derived from established signal processing and statistical principles are LBP entropy, DCT Benford law deviation, gradient co-occurrence entropy, Haar wavelet diagonal energy, FFT power slope deviation, Bayer noise inter-channel correlation, and edge sharpness distribution are explicitly computed from the raw image pixels and embedded by a dedicated Multi-Layer Perceptron (MLP). These features capture physical properties of real camera images that deep learning models are known to overlook.
+
+Third, the deep embedding from the SigLIP 2 backbone and the forensic feature embedding are concatenated and passed through a custom three-layer classification head employing SE-style channel attention, which learns to weight the contribution of each feature dimension based on its relevance to the AI/real discrimination task.
+
+\section{Statement of Assumptions}
+
+The proposed system operates under the following assumptions:
+
+\begin{itemize}
+    \item The input image is a standard RGB digital image in a common format (JPEG, PNG, or WebP).
+    \item The detector is used as a binary classifier: outputs are \textit{AI-generated} or \textit{Real}, with no distinction between generative sub-types.
+    \item The system is evaluated under an open-world detection scenario where the specific generative model that produced an AI image is unknown at inference time.
+    \item Hardware availability: The training ground used dual NVIDIA Tesla T4 GPUs which are available via the Kaggle Notebooks environment. On the other hand, the inference environment will be performed in CPU hardware on Hugging Face Space.
+    \item The dataset is limited however (curated from different data sources) and we can’t expect to generalize to every new generative model which may be released after the delivery date of our dataset.
+\end{itemize}
+
+\section{Aims and Objectives}
+
+\textbf{Aim:} The aim of this research is to design, implement, and evaluate a lightweight, single-pass hybrid AI image detector that matches the accuracy of heavy ensemble models while being fast enough for real-time web deployment.
+
+\textbf{Objectives:}
+\begin{enumerate}
+    \item Create a heterogeneous and diverse collection of the base 7,600 images across various real-world photo sources and five and more generative AI paradigms.
+    \item Customize the SigLIP 2 vision encoder on our forensic image classes by removing the text bits and bicubically interpolating the position place to 512 x 512 resolution.
+    \item Develop and validate a set of seven classical forensic feature extractors encompassing texture (LBP), frequency (DCT, FFT, Haar), noise (Bayer), and edge structure (Gradient Co-occurrence, Edge Sharpness), and test their discriminative power individuallyBuild and benchmark a set of seven classical forensic feature extractors for the forensic domain spanning texture (LBP), frequency (DCT, FFT, Haar), noise (Bayer), and edge structure (Gradient Co-occurrence, Edge Sharpness) and benchmark their discriminative capability in isolation.
+    \item Train a classically hybrid classification architecture that combines deep SigLIP 2 features with the classical forensic feature vector via a dedicated SE-attention head.
+    \item Benchmark our hybrid model on our testing data (as above) with the aim of greater than 95\% accuracy and greater than 0.90 AUC-ROC.
+    \item Benchmark our deployed model against commercial detection solutions (Undetectable AI, AI or Not) on our hard-negative images, with a slight nod towards accuracy and clear wins on speed.
+    \item Deploy our trained model to Hugging Face Spaces as an interactive web app and deliver an open and operationally accessible image verification tool.
+\end{enumerate}
+
+\section{Organisation of the Report}
+
+The remainder of this dissertation is organised as follows. Chapter~\ref{ch:literature} is an overview of the literature on deep learning, Vision Transformers, Vision-Language models, and detection of AI-generated images. Chapter~\ref{ch:problem} reflects further on the research problem and states the particular gap in knowledge we aim to fill. Chapter~\ref{ch:methodology} details the entirety of our methodology, including construction of our dataset, design of forensic features, the model itself, training strategy and deployment. Chapter~\ref{ch:results} contains description of experimental results, ablations, ROC curves analysed, and comparison against a commercial baseline. Finally Chapter~\ref{ch:summary} discusses our findings and their limits, as well as future work we intend to explore.

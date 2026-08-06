@@ -1,0 +1,52 @@
+Training Summary (Augmented & Regularized)
+======================================================================
+Hardware:
+- Device: Tesla T4
+- Memory: 14.7 GB
+
+Configuration:
+- Base Model: Ateeqq/ai-vs-human-image-detector
+- Training Mode: Full Fine-Tuning with Enhanced Regularization
+- Dataset: 7,157 train / 1,263 test images
+- Classes: ['ai', 'hum']
+
+Data Augmentation:
+✅ Random resized crop (scale 0.8-1.0)
+✅ Random horizontal flip (p=0.5)
+✅ Random rotation (±15°)
+✅ Random affine transform
+✅ Color jitter (brightness, contrast, saturation, hue)
+✅ Gaussian blur (sigma 0.1-2.0)
+
+Regularization Techniques:
+✅ Weight decay: 0.05
+✅ Label smoothing: 0.1
+✅ Dropout: 0.3
+✅ Lower learning rate: 5e-06
+✅ Increased warmup: 0.15
+✅ Early stopping: 5 epochs
+
+Hyperparameters:
+- Max Epochs: 20
+- Early Stopping Patience: 5
+- Batch Size: 16
+- Gradient Accumulation: 4
+- Effective Batch Size: 64
+- Learning Rate: 5e-06
+- Warmup Ratio: 0.15
+- Weight Decay: 0.05
+- Label Smoothing: 0.1
+- Dropout: 0.3
+- Optimizer: AdamW
+- Precision: FP16
+
+Results:
+- Final Accuracy: 0.9604
+- Precision: 0.9628
+- Recall: 0.9604
+- F1-Score: 0.9607
+- Final Loss: 0.2914
+- Epochs Trained: 14.0
+- Training Time: 4424.79s
+
+Model saved to: /content/drive/MyDrive/Models/zero_ai_final_augmented

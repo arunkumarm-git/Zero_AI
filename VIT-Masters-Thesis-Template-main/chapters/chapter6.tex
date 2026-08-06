@@ -1,0 +1,44 @@
+\chapter{Summary and Future Work}
+\label{ch:summary}
+
+\section{Summary of Contributions}
+
+This dissertation details the development and evaluation of a lightweight hybrid AI image detector. The system is built to balance detection accuracy with computational efficiency.The project introduces two main technical contributions. First, it adapts the SigLIP 2 vision encoder \cite{tschannen2025siglip2} for binary AI image forensics. While originally trained on 10 billion image-text pairs, this encoder was modified by removing the text components and applying bicubic position embedding interpolation to process $512 \times 512$ resolution inputs. This method keeps the foundation model's core visual representations intact but requires much less memory and computing power.Second, the system includes a forensic feature engineering module that calculates seven specific signals: LBP entropy, DCT Benford deviation, Gradient Co-occurrence entropy, Haar Wavelet HH energy, FFT power slope, Bayer noise inter-channel correlation, and Edge Sharpness grid. A Phase-1 selection study verified these metrics. Together, these computed signals capture the frequency, noise, and texture patterns that standard deep learning models usually miss.
+
+A custom three-layer classification head incorporating SE-style channel attention was designed to fuse the 1,024-dimensional SigLIP~2 deep embedding with the 128-dimensional forensic feature embedding. The SE-attention mechanism provides a learned, dynamic weighting of feature dimensions that adapts to each input image.
+
+The system was trained on a curated dataset of 7,600 images spanning five distinct AI generative paradigms and diverse real-world photographic sources, and achieved 96.6\% accuracy, 98.9\% precision, 95.3\% recall, 97.0\% F1-score, and 0.992 AUC-ROC on a held-out test set of 1,132 images---metrics that place it firmly within the accuracy range of best-in-class ensemble systems.
+
+The system was deployed as an interactive Hugging Face Spaces application with a measured end-to-end inference latency of 142.4 milliseconds on CPU hardware, representing a $6.5\times$ and $36.7\times$ speed advantage over the commercial tools AI or Not and Undetectable AI respectively. On a representative hard-negative test case, the proposed model correctly identified a synthetic image that both commercial tools classified as real, with 100\% confidence.
+
+\section{Concluding Remarks}
+
+The main hypothesis of this dissertation, that is, the possibility of achieving the accuracy of intensive ensemble detection systems with significantly less computational cost using a one-pass hybrid architecture with a SigLIP2 vision backbone and deliberately designed traditional forensic features, has been supported by the experiments. The accuracy of 96.6\%, AUC-ROC of 0.992, and inference latency of 142.4 ms, along with better performance on hard-negative images compared to commercial tools, demonstrate that the long-standing efficiency-accuracy trade-off in AI-based image detection systems is, in fact, not an intrinsic property. This trade-off is an artifact that can be overcome with deliberate architecture design, capitalizing on the strengths of both deep visual representations and traditional forensic features.
+
+Generative AI-based imagery is one of the most complex and challenging problems to the integrity of digital information in recent times. The tools and architectures developed in this dissertation are an important step towards developing accessible, accurate, and real-time solutions to this problem. However, they are just an initial step towards resolving the issue. The generative AI-based tools will continue to evolve to counter the detection tools developed in this dissertation. Moreover, the forensic features used in these detection tools will continue to degrade. A more effective solution to this problem will require more than just better detection tools. A more effective solution will require changes to the image generation and distribution ecosystem. A more effective solution will require better image provenance standards, the use of watermarking in image generation tools, and policy changes to assign responsibility to image generators.
+
+\section{Limitations}
+
+Although the quantitative outcomes are strong, several limitations should be acknowledged. The 7,600 diverse training images are small compared to detectors trained on state-of-the-art datasets such as UnivFD or GenImage (100,000+ images). This dataset size likely limits the model's ability to generalise to generative models and photographic styles not represented in training.
+
+The forensic feature extraction step is rapid (less than 10 ms of the total inference time) but relies on signal processing libraries (SciPy, PyWavelets) that may present challenges in constrained deployment environments. The Bayer noise feature, while theoretically powerful, can give unreliable indicators for images that have undergone substantial JPEG re-compression, or for images from cameras with non-standard demosaicing algorithms.
+
+The model was evaluated on a single held-out test split drawn from the same distribution as the training data. Although distribution shift is acknowledged as the primary challenge for all existing detectors---as demonstrated by the AIGIBench benchmark studies \cite{li2025aigibench} and the zero-shot evaluation by Ren et al.~\cite{ren2026benchmark}---the current work lacks a formal cross-dataset generalisation evaluation on external benchmarks.
+
+\section{Future Work}
+
+There are several promising directions for future research following from the limitations and findings of this work:
+
+\begin{itemize}
+    \item \textbf{Larger and more diverse training datasets:} Increasing the size of the training dataset beyond 50,000 images is also likely to improve accuracy, both for known and unknown data sets. This would include generative architectures developed after the initial dataset collection. To address the problem of evolving image generation technologies, the evaluation framework itself needs to be tested with updated benchmarks such as AIGIBench and GenImage.
+
+    \item \textbf{Cross-dataset generalisation evaluation:} An evaluation of the proposed model's generalisation potential using external test datasets (e.g., ForenSynths, GenImage, and WildFake) would help to clearly identify the model's generalization performance and enable comparison with previously proposed models, wherein the generalization performance is mentioned.
+
+    \item \textbf{Adversarial robustness:} The performance of the proposed model in the context of adversarial attacks, wherein an adversary tries to attack an AI-based image detection system by introducing minor pixel-level changes, is unknown. The proposed model's performance against image distortions, as mentioned in the AIGIBench test protocol, is yet to be determined. The image distortions include JPEG compression, image resizing, Gaussian noise, and color jittering.
+
+    \item \textbf{Explainability and visual attribution:} Although the proposed model provides the facility to make the model explainable through the determination of forensic feature scores, the image regions that contributed to the classification are unknown. The determination of the model's potential to integrate the explainability techniques with the proposed model, such as the SigLIP 2 model, and generating heat maps to provide tangible image evidence to support the human evaluators' trust in the model's classification results is yet to be determined.
+
+    \item \textbf{Video and multi-frame detection:} In this paper we deal with images one by one, an extension of this framework to video data would be a natural development. Especially since unusual inter-frame noise correlation and optical flow features could act as discriminative features. This is particularly pressing with the growing popularity of AI-generated video content on Sora.
+
+    \item \textbf{Model compression and edge deployment:} Even though the SigLIP 2 model is much smaller than other vision and language models, it still consumes a few hundred megabytes of memory. Structured pruning, knowledge distillation, quantization (INT8 or INT4) etc. are likely to compress the model size even further and considerably reduce latency making it easy to deploy on edge devices without requiring GPU acceleration.
+\end{itemize}

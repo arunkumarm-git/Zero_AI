@@ -1,0 +1,51 @@
+\chapter{Source Code and Implementation Details}
+
+\section{Training Pipeline}
+
+The complete training pipeline is implemented in Python using PyTorch. The primary training script (\texttt{train.py}) handles dataset loading, model initialisation, the freeze-unfreeze training schedule, and checkpoint management as described in Algorithm~4.1 in Chapter~\ref{ch:methodology}.
+
+\section{Forensic Feature Extraction Module}
+
+The forensic feature extraction module (\texttt{features.py}) implements all seven forensic feature extractors described in Chapter~\ref{ch:methodology}. Each extractor accepts a PIL Image and returns a scalar in $[0, 1]$:
+
+\begin{itemize}
+    \item \texttt{compute\_lbp\_entropy(image)} --- Local Binary Pattern entropy
+    \item \texttt{compute\_dct\_blocking(image)} --- DCT Benford's Law deviation
+    \item \texttt{compute\_gradient\_cooccurrence(image)} --- Gradient co-occurrence entropy
+    \item \texttt{compute\_haar\_wavelet(image)} --- Haar wavelet diagonal energy ratio
+    \item \texttt{compute\_fft\_slope(image)} --- FFT power spectrum slope deviation
+    \item \texttt{compute\_bayer\_noise(image)} --- Bayer noise inter-channel correlation
+    \item \texttt{compute\_edge\_sharpness(image)} --- Edge sharpness grid score
+\end{itemize}
+
+\section{Deployment Application}
+
+The Gradio web application (\texttt{app.py}) is deployed on Hugging Face Spaces and is publicly accessible. The application provides an interactive interface for uploading images and receiving real-time AI/real classification verdicts with confidence scores and individual forensic feature breakdowns.
+
+\begin{small}
+\begin{verbatim}
+Model ID: Ateeqq/ai-vs-human-image-detector
+Deployment: Hugging Face Spaces
+Inference Hardware: CPU (2 vCPU, 16 GB RAM)
+Average Latency: 142.4 ms per image
+\end{verbatim}
+\end{small}
+
+\section{Repository Structure}
+
+The complete source code repository is organised as follows:
+
+\begin{small}
+\begin{verbatim}
+hybrid-ai-detector/
+|-- train.py            # Main training pipeline (Algorithm 4.1)
+|-- features.py         # Forensic feature extraction module
+|-- model.py            # HybridAIDetector architecture
+|-- dataset.py          # Dataset loading and preprocessing
+|-- app.py              # Gradio inference application
+|-- requirements.txt    # Python dependencies
+|-- backbone/           # Saved SigLIP 2 backbone weights
+|-- hybrid_head.pt      # FeatureMLP + HybridForensicHead weights
+|-- hybrid_config.json  # Feature metadata and config
+\end{verbatim}
+\end{small}

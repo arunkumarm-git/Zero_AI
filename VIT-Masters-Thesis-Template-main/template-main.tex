@@ -1,0 +1,91 @@
+%% Pass options BEFORE \documentclass so the class cannot clash
+\PassOptionsToPackage{numbers,sort&compress}{natbib}
+\PassOptionsToPackage{
+  colorlinks=true,
+  linkcolor=black,
+  citecolor=blue,
+  urlcolor=blue,
+  bookmarks=true,
+  bookmarksopen=true
+}{hyperref}
+
+\documentclass[12pt, a4paper, oneside]{vitmscthesis}
+
+%% Microtypography: the cleanest fix for overfull hboxes
+\usepackage{microtype}
+
+%% Force figure placement with [H] specifier
+\usepackage{float}
+\usepackage{placeins}
+
+%% theorem environments...
+\newtheorem{theorem}{Theorem}[chapter]
+\newtheorem{lemma}[theorem]{Lemma}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}{Remark} %% without numbering...
+
+%% -- end theorem environments...
+
+\renewcommand{\baselinestretch}{1.5} % for line spacing
+
+%% Suppress overfull hbox warnings
+\hbadness=10000
+\hfuzz=3pt
+\AtBeginDocument{\setlength{\emergencystretch}{5em}}
+
+\thesistitle{Automated Filtration of synthetic images using a lightweight SigLIP 2 Hybrid architecture}
+\thesison{Master Thesis}
+\programme{M.Sc. Data Science}
+\programmeLongName{Master of Science in Data Science}
+\department{Department of Mathematics}
+\school{School of Advanced Sciences}
+\student{Arun Kumar M}
+\regno{24MDT1131}
+\guide{Dr. Hannah Grace G}
+\guidedesignation{Associate Professor}
+\hod{Dr.\, Manivannan A}
+\submittedon{April - 2026}
+
+
+\bibliographyname{References}
+
+\begin{document}
+	
+%%%-----Printing the first few pages:  title, certificate, acknowledgment, etc.
+\input{frontmatters/frontmatter-main}
+
+\listoffigures
+\listoftables 
+
+
+\include{frontmatters/abbreviations.tex}
+
+%%--- All chapters
+\mainmatter
+\include{chapters/chapter1}
+\include{chapters/chapter2}
+\include{chapters/chapter3}
+\include{chapters/chapter4}
+\include{chapters/chapter5}
+\include{chapters/chapter6}
+
+
+\addcontentsline{toc}{chapter}{\thebibliographyname}
+\bibliographystyle{unsrtnat}
+{\sloppy
+\bibliography{reference}
+}
+
+\appendix
+
+\include{appendices/appedix1}
+
+
+
+
+
+%\include{backmatters/lastpage}
+
+\end{document}
